@@ -1,0 +1,38 @@
+#%RAML 1.0
+version: v1
+title: Demo Message Broker API
+baseUri: http://demo-message-broker-api.cloudhub.io/api/
+
+
+/messages:
+  post:
+    description: Post message to Salesforce   
+    body: 
+      application/json:
+        type: object
+        properties: 
+          email: string
+          message: string
+          city: string
+          
+        example: {
+          "city": "Jena",
+          "message": "Hello Everybody",
+          "email": "rajesh.bura@accenture.com"
+        }
+
+    responses: 
+      201: 
+        body: 
+          application/json:
+            example: {"message": "Message posted successfully"}
+
+      400:
+        body: 
+          application/json:
+            example: {"message": "Error in posting message. Please check the JSON object and make sure it's valid."}          
+        
+                              
+   
+        
+  

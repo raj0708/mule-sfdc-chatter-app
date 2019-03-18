@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:sap="http://www.mulesoft.org/schema/mule/sap" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/sap http://www.mulesoft.org/schema/mule/sap/current/mule-sap.xsd">
+    <flow name="postMessageFlow">
+        <flow-ref name="getWeatherDataFlow" doc:name="getWeatherDataFlow"/>
+        <flow-ref name="getFlickrDetails" doc:name="getFlickrDetails"/>
+        <flow-ref name="postMessageToSFDC" doc:name="postMessageToSFDC"/>
+
+    </flow>
+    <sub-flow name="getWeatherDataFlow">
+        <dw:transform-message doc:name="Transform Message" metadata:id="5b034d17-3d5f-4619-94d2-224c063e2f53">
+            <dw:input-payload/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	city: flowVars.request.city
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <logger message="**Get Weather Request** #[message.payloadAs(String)]" level="INFO" doc:name="Logger"/>
+        <http:request config-ref="WeatherServiceAPI" path="/current.json?key=11be5975444c4f71b32172007182006&amp;q=#[payload.city]" method="GET" doc:name="Weather Service" metadata:id="e9867055-d6b1-4bb7-901c-c5d4e6f39975">
+        </http:request>
+        <logger message="**Get Weather Response** #[message.payloadAs(String)]" level="INFO" doc:name="Logger"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-variable variableName="weatherDetails"><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	temp: payload.current.temp_c,
+	condition: payload.current.condition.text,
+	humidity: payload.current.humidity,
+	wind: payload.current.wind_mph,
+	country: payload.location.country,
+	lat:payload.location.lat,
+	lon:payload.location.lon
+	
+}]]></dw:set-variable>
+
+        </dw:transform-message>
+
+    </sub-flow>
+    <sub-flow name="getFlickrDetails">
+        <dw:transform-message doc:name="Transform Message">
+            <dw:input-payload doc:sample="sample_data\json.json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	lat: flowVars.weatherDetails.lat,
+	lon: flowVars.weatherDetails.lon
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <logger message="**Get Flickr Request** #[message.payloadAs(String)]" level="INFO" doc:name="Logger"/>
+        <http:request config-ref="FlickrAPI" path="/services/rest/" method="GET" doc:name="FlickrAPI">
+            <http:request-builder>
+                <http:query-param paramName="method" value="flickr.places.findByLatLon"/>
+                <http:query-param paramName="api_key" value="db266ddaf393309b77b51a2c65ba4e76"/>
+                <http:query-param paramName="lat" value="#[payload.lat]"/>
+                <http:query-param paramName="lon" value="#[payload.lon]"/>
+                <http:query-param paramName="format" value="json"/>
+                <http:query-param paramName="nojsoncallback" value="1"/>
+
+            </http:request-builder>
+        </http:request>
+        <logger message="**Get Flickr Response** #[message.payloadAs(String)]" level="INFO" doc:name="Logger"/>
+        <dw:transform-message doc:name="Build FlickrUrl" metadata:id="d4a7776a-bf4c-4996-991f-1fb9b2d5d9ba">
+            <dw:input-payload doc:sample="FlickrResponse.json" mimeType="application/json"/>
+            <dw:set-variable variableName="flickrDetails"><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	URL: "https://www.flickr.com/places" ++ payload.places.place[0].place_url
+}]]></dw:set-variable>
+        </dw:transform-message>
+    </sub-flow>
+    <sub-flow name="postMessageToSFDC">
+        <dw:transform-message doc:name="Transform Message" metadata:id="6987ddc6-c6e7-4366-822f-c9627952258a">
+            <dw:input-payload doc:sample="message-example.json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+[{
+	ParentId: "0F97F000000Ee8f",
+	Type: "TextPost",
+	Body: "Message from: " ++ flowVars.request.email ++ "\n" ++ flowVars.request.message ++ "\n" ++ "current_temp_c: " ++ flowVars.weatherDetails.temp ++ "\n" ++ "weather_cond: " ++ flowVars.weatherDetails.condition ++ "\n" ++ "\n" ++ "humidity: " ++ flowVars.weatherDetails.humidity ++ "\n" ++ "country: " ++ flowVars.weatherDetails.country ++ "\n" ++ "Some Pictures from the City:" ++ flowVars.flickrDetails.URL 
+}]]]></dw:set-payload>
+        </dw:transform-message>
+        <logger message="**POST Chatter Message Request** #[message.payloadAs(String)]" level="INFO" doc:name="Logger"/>
+
+        <sfdc:create config-ref="SalesforceOrg1" type="FeedItem" doc:name="Salesforce">
+            <sfdc:objects ref="#[payload]"/>
+        </sfdc:create>
+        <logger message="**POST Chatter Message Request** #[message.payloadAs(String)]" level="INFO" doc:name="Logger"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	status: payload[0].success,
+	id: payload[0].id
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </sub-flow>
+
+</mule>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:context="http://www.springframework.org/schema/context" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd">
+    <context:property-placeholder location="message-broker-${env}.properties"/>
+    <http:request-config name="WeatherServiceAPI" host="api.apixu.com" port="80" basePath="/v1" doc:name="HTTP Request Configuration"/>
+     <http:request-config name="FlickrAPI" protocol="HTTPS" host="api.flickr.com" port="443" doc:name="HTTP Request Configuration"/>
+    <sfdc:config name="SalesforceOrg1" username="${sfdc.username}" password="${sfdc.password}" securityToken="${sfdc.token}" url="https://login.salesforce.com/services/Soap/u/41.0" doc:name="Salesforce: Basic Authentication" connectionTimeout="300000" disableSessionInvalidation="true"/>
+</mule>

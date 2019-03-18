@@ -1,0 +1,38 @@
+#%RAML 1.0
+version: v1
+title: Salesforce Chatter REST API
+
+
+/chatter:
+  post:
+    description: posts new messages to chatter groups  
+    body: 
+      application/json:
+        type: object
+        properties: 
+          email: string
+          message: string
+          city: string
+          
+        example: {
+          "city": "Jena",
+          "message": "how are you guys",
+          "email": "rajesh.bura@accenture.com"
+        }
+
+    responses: 
+      201: 
+        body: 
+          application/json:
+            type: object
+            example: {"message": "Message posted successfully"}
+
+      400:
+        body: 
+          application/json:
+            example: {"message": "Error in posting message. Please check the JSON object and make sure it's valid."}          
+        
+                              
+   
+        
+  
